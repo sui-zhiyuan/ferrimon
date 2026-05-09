@@ -29,7 +29,7 @@ System monitor for short-term benchmark testing with NUMA support and web visual
 - `cargo build` - build all workspace members
 - `cargo build --release` - optimized build
 - `cargo test` - run tests
-- `cargo run --bin ferrimon-collector -- --workdir ./data` - collect CPU metrics
+- `cargo run --bin ferrimon -- --workdir ./data` - collect CPU metrics
 - `cargo run --bin ferrimon-web -- --workdir ./data --port 8080` - launch web server
 - `cargo clippy --all` - lint all workspace members
 - `cargo fmt --all` - format all workspace members

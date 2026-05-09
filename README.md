@@ -20,8 +20,8 @@ This is the minimum viable implementation focusing on CPU monitoring:
 The project is organized as a Cargo workspace:
 
 - `crates/common` - Shared library for CPU metrics, storage
-- `crates/collector` - Metrics collector binary
-- `crates/web` - Web server binary
+- `crates/collector` - Metrics collector binary (builds `ferrimon` executable)
+- `crates/web` - Web server binary (builds `ferrimon-web` executable)
 
 ## Features
 
@@ -55,10 +55,10 @@ Run the collector to capture CPU metrics:
 cargo build --release
 
 # Collect metrics to ./data directory (default interval: 100ms)
-./target/release/ferrimon-collector --workdir ./data
+./target/release/ferrimon --workdir ./data
 
 # Collect with custom interval (200ms) and format (csv only)
-./target/release/ferrimon-collector --workdir ./data --interval-ms 200 --format csv
+./target/release/ferrimon --workdir ./data --interval-ms 200 --format csv
 
 # The collector runs until you press Ctrl+C
 ```
@@ -83,7 +83,7 @@ Then open http://localhost:8080 in your browser to:
 
 - `--workdir <DIR>` - Directory to store metrics data (default: ./data)
 - `--interval-ms <MS>` - Collection interval in milliseconds (default: 100)
-- `--format <FORMAT>` - Output format: csv, ndjson, or both (default: both)
+- `--format <FORMAT>` - Output format: csv, ndjson, or both (default: ndjson)
 
 ### Web Server Options
 
