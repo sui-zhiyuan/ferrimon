@@ -1,3 +1,4 @@
+use anyhow::Result;
 use axum::{
     Router,
     response::{Html, IntoResponse},
@@ -24,7 +25,7 @@ struct AppState {
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();

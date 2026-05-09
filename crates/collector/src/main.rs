@@ -1,10 +1,12 @@
+use anyhow::Result;
 use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::signal;
-use tracing::{error, info, warn};
+use tokio_util::sync::CancellationToken;
+use tracing::info;
 
-use ferrimon_common::{MetricsWriter, OutputFormat, collect_cpu_metrics};
+use ferrimon_common::{OutputFormat, run_collection_loop};
 
 #[derive(Parser, Debug)]
 #[command(name = "ferrimon-collector")]
@@ -16,7 +18,7 @@ struct Args {
     #[arg(short = 'i', long, default_value = "100", value_name = "MS")]
     interval_ms: u64,
 
-    #[arg(short, long, default_value = "both", value_enum)]
+    #[arg(short, long, default_value = "ndjson", value_enum)]
     format: FormatArg,
 }
 
@@ -38,11 +40,13 @@ impl From<FormatArg> for OutputFormat {
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let args = Args::parse();
     let format = OutputFormat::from(args.format);
+    let interval = Duration::from_millis(args.interval_ms);
+    let cancel_token = CancellationToken::new();
 
     info!(
         workdir = %args.workdir.display(),
@@ -51,46 +55,27 @@ async fn main() -> std::io::Result<()> {
         "Starting ferrimon collector"
     );
 
-    let mut writer = MetricsWriter::new(&args.workdir, format)?;
-    let interval = Duration::from_millis(args.interval_ms);
-    let mut prev_stats = None;
-    let mut counter = 0u64;
+    let cancel_token_clone = cancel_token.clone();
 
     let mut sigterm = signal::unix::signal(signal::unix::SignalKind::terminate())?;
     let mut sigint = signal::unix::signal(signal::unix::SignalKind::interrupt())?;
 
-    loop {
+    let signal_handler = async move {
         tokio::select! {
             _ = sigterm.recv() => {
                 info!("Received SIGTERM, shutting down");
-                break;
             }
             _ = sigint.recv() => {
                 info!("Received SIGINT, shutting down");
-                break;
-            }
-            _ = tokio::time::sleep(interval) => {
-                if let Some((metrics, curr_stats)) = collect_cpu_metrics(prev_stats) {
-                    if let Err(e) = writer.write(&metrics) {
-                        error!(error = %e, "Failed to write metrics");
-                    } else {
-                        counter += 1;
-                        if counter.is_multiple_of(10) {
-                            info!(count = counter, usage_percent = %metrics.usage_percent, "Collected metrics");
-                        }
-                    }
-                    prev_stats = Some(curr_stats);
-                } else {
-                    warn!("Failed to collect CPU metrics");
-                }
             }
         }
-    }
+        cancel_token_clone.cancel();
+    };
 
-    if let Err(e) = writer.flush() {
-        error!(error = %e, "Failed to flush metrics");
-    }
+    tokio::spawn(signal_handler);
 
-    info!(total_samples = counter, "Collector stopped");
+    run_collection_loop(&args.workdir, interval, format, cancel_token)
+        .await
+        .map_err(anyhow::Error::msg)?;
     Ok(())
 }
