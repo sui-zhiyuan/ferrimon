@@ -27,6 +27,19 @@ System monitor for short-term benchmark testing with NUMA support and web visual
 - `cargo clippy` - lint with clippy
 - `cargo fmt` - format code
 
+## Git Workflow
+
+Before making any changes to the repository:
+
+1. Create a feature branch: `git checkout -b feature/<description>`
+2. Make changes and commit incrementally
+
+When ready to merge:
+
+1. Rebase to latest master: `git fetch origin && git rebase origin/master`
+2. Merge with no fast-forward: `git checkout master && git merge --no-ff feature/<description>`
+   - Review commits being merged and use a meaningful summary message as the merge commit message
+
 ## Development Notes
 
 **Technology Stack**:
