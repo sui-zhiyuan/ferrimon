@@ -2,29 +2,40 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use crate::error::{FerrimonError, Result};
 use crate::types::{CpuMetrics, OutputFormat};
 
 pub struct MetricsWriter {
-    csv_file: Option<File>,
+    csv_file: Option<csv::Writer<File>>,
     ndjson_file: Option<File>,
     workdir: PathBuf,
-    csv_initialized: bool,
 }
 
 impl MetricsWriter {
-    pub fn new(workdir: &Path, format: OutputFormat) -> std::io::Result<Self> {
-        std::fs::create_dir_all(workdir)?;
+    pub fn new(workdir: &Path, format: OutputFormat) -> Result<Self> {
+        std::fs::create_dir_all(workdir).map_err(FerrimonError::DirectoryCreate)?;
 
         let csv_file = if format == OutputFormat::Csv || format == OutputFormat::Both {
             let path = workdir.join("metrics.csv");
-            Some(OpenOptions::new().create(true).append(true).open(&path)?)
+            let file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+                .map_err(FerrimonError::FileOpen)?;
+            Some(csv::Writer::from_writer(file))
         } else {
             None
         };
 
         let ndjson_file = if format == OutputFormat::Ndjson || format == OutputFormat::Both {
             let path = workdir.join("metrics.ndjson");
-            Some(OpenOptions::new().create(true).append(true).open(&path)?)
+            Some(
+                OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&path)
+                    .map_err(FerrimonError::FileOpen)?,
+            )
         } else {
             None
         };
@@ -33,52 +44,22 @@ impl MetricsWriter {
             csv_file,
             ndjson_file,
             workdir: workdir.to_path_buf(),
-            csv_initialized: false,
         })
     }
 
-    pub fn write(&mut self, metrics: &CpuMetrics) -> std::io::Result<()> {
-        if let Some(ref mut file) = self.csv_file {
-            if !self.csv_initialized {
-                writeln!(
-                    file,
-                    "timestamp,user,nice,system,idle,iowait,irq,softirq,steal,guest,guest_nice,usage_percent"
-                )?;
-                self.csv_initialized = true;
-            }
-            writeln!(
-                file,
-                "{},{},{},{},{},{},{},{},{},{},{},{:.2}",
-                metrics.timestamp.to_rfc3339(),
-                metrics.user,
-                metrics.nice,
-                metrics.system,
-                metrics.idle,
-                metrics.iowait,
-                metrics.irq,
-                metrics.softirq,
-                metrics.steal,
-                metrics.guest,
-                metrics.guest_nice,
-                metrics.usage_percent
-            )?;
+    pub fn write(&mut self, metrics: &CpuMetrics) -> Result<()> {
+        if let Some(ref mut csv_writer) = self.csv_file {
+            csv_writer
+                .serialize(metrics)
+                .map_err(FerrimonError::CsvSerialize)?;
+            csv_writer.flush().map_err(FerrimonError::FileWrite)?;
         }
 
         if let Some(ref mut file) = self.ndjson_file {
-            let json = serde_json::to_string(metrics).map_err(std::io::Error::other)?;
-            writeln!(file, "{}", json)?;
+            let json = serde_json::to_string(metrics).map_err(FerrimonError::JsonSerialize)?;
+            writeln!(file, "{}", json).map_err(FerrimonError::FileWrite)?;
         }
 
-        Ok(())
-    }
-
-    pub fn flush(&mut self) -> std::io::Result<()> {
-        if let Some(ref mut file) = self.csv_file {
-            file.flush()?;
-        }
-        if let Some(ref mut file) = self.ndjson_file {
-            file.flush()?;
-        }
         Ok(())
     }
 

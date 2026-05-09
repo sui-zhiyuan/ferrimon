@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CpuMetrics {
     pub timestamp: DateTime<Utc>,
     pub user: u64,
@@ -14,7 +14,6 @@ pub struct CpuMetrics {
     pub steal: u64,
     pub guest: u64,
     pub guest_nice: u64,
-    pub usage_percent: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
