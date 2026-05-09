@@ -1,0 +1,15 @@
+[package]
+name = "ferrimon-collector"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "ferrimon-collector"
+path = "src/main.rs"
+
+[dependencies]
+ferrimon-common = { path = "../common" }
+tokio = { version = "1", features = ["full", "signal"] }
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"

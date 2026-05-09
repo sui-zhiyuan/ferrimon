@@ -6,26 +6,33 @@ System monitor for short-term benchmark testing with NUMA support and web visual
 
 **Purpose**: Monitor system and process metrics during benchmark tests (seconds to hours).
 
+**Current Implementation**: Minimum viable CPU monitor with separate collector and web server processes.
+
 **Key Components**:
-- Metrics collector (CPU, memory, swap, NUMA stats)
-- Process manager (starts and monitors target processes)
-- Data storage (CSV + NDJSON dual format)
-- Web server (axum-based visualization)
+- **crates/common**: Shared library (types, CPU reading, storage)
+- **crates/collector**: Binary that collects CPU metrics and writes to CSV/NDJSON
+- **crates/web**: Binary that serves collected data via HTTP
 
 **Data Flow**:
-1. Ferrimon starts target process via CLI or config file
-2. Collector samples metrics at configurable interval (default 100ms)
-3. Data written to working directory in CSV and/or NDJSON
-4. Web server serves historical charts and comparison views
+1. Ferrimon collector reads `/proc/stat` at configurable interval
+2. Metrics calculated and written to working directory (CSV + NDJSON)
+3. Web server serves files for download
+
+**Planned Components**:
+- Process manager (starts and monitors target processes)
+- Memory/swap metrics collector
+- NUMA stats collector
+- Web visualization with charts
 
 ## Commands
 
-- `cargo build` - build the project
+- `cargo build` - build all workspace members
+- `cargo build --release` - optimized build
 - `cargo test` - run tests
-- `cargo run -- --workdir ./data -- <command>` - run with target process
-- `cargo run -- serve --workdir ./data` - launch visualization server
-- `cargo clippy` - lint with clippy
-- `cargo fmt` - format code
+- `cargo run --bin ferrimon-collector -- --workdir ./data` - collect CPU metrics
+- `cargo run --bin ferrimon-web -- --workdir ./data --port 8080` - launch web server
+- `cargo clippy --all` - lint all workspace members
+- `cargo fmt --all` - format all workspace members
 
 ## Git Workflow
 
@@ -45,15 +52,16 @@ When ready to merge:
 **Technology Stack**:
 - Web framework: axum
 - Data formats: CSV + NDJSON
-- Config format: YAML
+- Config format: YAML (planned)
 - Metrics interval: 100ms or lower (configurable)
+- Workspace: 3 crates (common, collector, web)
 
-**NUMA Support**:
+**NUMA Support** (Planned):
 - Reads from `/sys/devices/system/node/` and `/proc/` filesystems
 - Falls back gracefully on non-NUMA systems
 - Tracks per-NUMA-node CPU/memory for both server and processes
 
-**Process Management**:
+**Process Management** (Planned):
 - Target processes started by ferrimon (not monitoring existing PIDs)
 - Supports both CLI arguments after `--` and YAML config files
 
