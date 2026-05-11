@@ -1,8 +1,24 @@
-# ide and editors
-/.idea
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# general
+*.local
 
 # build output
-/target
+target
+
+#node project output
+node_modules
 
 # tempory values
-/data
+data
+
+#MacOs folder describer
+.DS_Store

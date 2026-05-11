@@ -1,151 +1,85 @@
 # Ferrimon
 
-A system monitor for short-term benchmark testing on Linux servers, with NUMA support and web-based visualization.
+Ferrimon is a Linux benchmark monitor with a Rust collector/web backend and a Vue frontend workspace.
 
-## Overview
+## Current Scope
 
-Ferrimon monitors system and process-level metrics during benchmark tests that run from seconds to hours. It collects CPU, memory, swap usage for both the whole server and target processes, with full NUMA-awareness.
+- Collects aggregate CPU usage from `/proc/stat` on a fixed interval.
+- Writes metrics as CSV and/or NDJSON in a work directory.
+- Serves raw metrics files over HTTP from the Rust web server.
+- Includes a Vue app scaffold in `web-app/` for frontend integration.
 
-## Current Implementation
+## Repository Layout
 
-This is the minimum viable implementation focusing on CPU monitoring:
+- `crates/common` - shared collection loop, CPU math, storage logic.
+- `crates/collector` - collector binary package (`ferrimon`).
+- `crates/web` - web server binary package (`ferrimon-web`).
+- `web-app` - Vue + Vite frontend source (config files stay in this directory).
+- `package.json` / `pnpm-lock.yaml` at repo root - frontend scripts and dependencies.
 
-- **System-wide CPU metrics**: Overall CPU usage percentage
-- **Dual data formats**: CSV and NDJSON output
-- **Collector binary**: Standalone process for metrics collection
-- **Web server**: Serves collected data for download
-
-## Project Structure
-
-The project is organized as a Cargo workspace:
-
-- `crates/common` - Shared library for CPU metrics, storage
-- `crates/collector` - Metrics collector binary (builds `ferrimon` executable)
-- `crates/web` - Web server binary (builds `ferrimon-web` executable)
-
-## Features
-
-- **System-wide metrics**: CPU, memory, swap usage for the entire server
-- **Process-level metrics**: Monitor specific processes launched by ferrimon
-- **NUMA support**: Per-NUMA-node CPU/memory metrics, topology display, and process allocation tracking
-- **Web visualization**: Historical charts, test run comparison, future real-time monitoring
-- **Flexible process management**: Start target processes via CLI or configuration file
-- **Dual data formats**: CSV and NDJSON for maximum compatibility
-
-## Metrics Collected
-
-### Current (Minimum Implementation)
-- Overall CPU usage percentage
-
-### Planned
-- CPU usage (total and per-core)
-- Memory usage (used, free, cached, buffers)
-- Swap usage
-- Per-process CPU/memory
-- NUMA metrics
-
-## Usage
-
-### Collect Metrics
-
-Run the collector to capture CPU metrics:
+## Rust Commands
 
 ```bash
-# Build first
+cargo build
 cargo build --release
-
-# Collect metrics to ./data directory (default interval: 100ms)
-./target/release/ferrimon --workdir ./data
-
-# Collect with custom interval (200ms) and format (csv only)
-./target/release/ferrimon --workdir ./data --interval-ms 200 --format csv
-
-# The collector runs until you press Ctrl+C
+cargo fmt --all
+cargo clippy --all
+cargo test
 ```
 
-### View Metrics
-
-Start the web server to view/download collected metrics:
+Run collector:
 
 ```bash
-# Start web server on port 8080 (default)
-./target/release/ferrimon-web --workdir ./data
-
-# Or specify a custom port
-./target/release/ferrimon-web --workdir ./data --port 9000
+cargo run --bin ferrimon -- --workdir ./data --interval-ms 100 --format ndjson
+cargo run --bin ferrimon -- --workdir ./data --format both
 ```
 
-Then open http://localhost:8080 in your browser to:
-- Download `metrics.csv` (CSV format)
-- Download `metrics.ndjson` (NDJSON format)
-
-### Collector Options
-
-- `--workdir <DIR>` - Directory to store metrics data (default: ./data)
-- `--interval-ms <MS>` - Collection interval in milliseconds (default: 100)
-- `--format <FORMAT>` - Output format: csv, ndjson, or both (default: ndjson)
-
-### Web Server Options
-
-- `--workdir <DIR>` - Directory containing metrics data (default: ./data)
-- `--port <PORT>` - Port to listen on (default: 8080)
-
-## Planned Features
-
-### Basic CLI (Planned)
+Run web server:
 
 ```bash
-ferrimon --workdir /path/to/data -- your-command --with args
+cargo run --bin ferrimon-web -- --workdir ./data --port 8080
 ```
 
-### Configuration File (Planned)
+## Frontend Commands
+
+Run from repository root:
 
 ```bash
-ferrimon --config benchmark.yaml
+pnpm dev
+pnpm build
+pnpm test:unit
+pnpm test:e2e:dev
+pnpm test:e2e
+pnpm lint
+pnpm format
 ```
 
-Example configuration:
+Notes:
 
-```yaml
-workdir: /path/to/data
-interval_ms: 100
-command:
-  - ./my-benchmark
-  - --test-case
-  - workload-a
-```
+- Vite config and Vitest config live in `web-app/` and are referenced via script flags.
+- Frontend production build output is `target/web-app/dist`.
+- ESLint cache is written to `target/web-app/eslintcache`.
 
-### Web Interface (Planned)
+## Data Output
 
-Features:
-- Historical charts for all metrics
-- Compare multiple test runs side-by-side
-- Statistical summaries (min/max/avg/percentiles)
+Collector writes into `--workdir` (default `./data`):
 
-## Data Storage
+- `metrics.csv`
+- `metrics.ndjson`
 
-Metrics are stored in the working directory:
+Web routes in `crates/web/src/main.rs`:
 
-- `metrics.csv` - CSV format for spreadsheet compatibility
-  - Columns: timestamp, user, nice, system, idle, iowait, irq, softirq, steal, guest, guest_nice, usage_percent
-- `metrics.ndjson` - Newline-delimited JSON for programmatic access
-  - Each line is a JSON object with the same fields
+- `GET /`
+- `GET /metrics.csv`
+- `GET /metrics.ndjson`
 
 ## Requirements
 
-- Linux (reads from `/proc/stat`)
-- Rust 2024 edition
+- Linux (`/proc/stat` required).
+- Rust `1.87+`.
+- Node.js `^20.19.0 || >=22.12.0` for frontend tooling.
 
-## Building
+## Development Notes
 
-```bash
-cargo build --release
-```
-
-## Development
-
-See AGENTS.md for development guidelines and project structure.
-
-## License
-
-[To be determined]
+- Use `timeout` for collector smoke tests (avoid background `&` + manual kill).
+- Project workflow and guardrails are documented in `AGENTS.md`.
