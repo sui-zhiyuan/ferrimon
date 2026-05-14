@@ -106,19 +106,19 @@ fn main() {
             handles.push(thread::spawn(move || cpu_burn(iters)));
         }
 
-        for _ in 0..cfg.tickers {
-            let period = Duration::from_micros(cfg.ticker_period_us);
-            let work_iters = cfg.ticker_work_iters;
-            handles.push(thread::spawn(move || {
-                let start = Instant::now();
-                let mut v = 0u64;
-                while start.elapsed() < Duration::from_millis(200) {
-                    thread::sleep(period);
-                    v ^= cpu_burn(work_iters);
-                }
-                v
-            }));
-        }
+        // for _ in 0..cfg.tickers {
+        //     let period = Duration::from_micros(cfg.ticker_period_us);
+        //     let work_iters = cfg.ticker_work_iters;
+        //     handles.push(thread::spawn(move || {
+        //         let start = Instant::now();
+        //         let mut v = 0u64;
+        //         while start.elapsed() < Duration::from_millis(200) {
+        //             thread::sleep(period);
+        //             v ^= cpu_burn(work_iters);
+        //         }
+        //         v
+        //     }));
+        // }
 
         let mut checksum = 0u64;
         for h in handles {
