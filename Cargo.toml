@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/collector", "crates/web", "crates/common"]
+members = ["crates/collector", "crates/web", "crates/common", "crates/burner"]
 
 [workspace.dependencies]
 anyhow = "1"
@@ -16,3 +16,4 @@ tokio-util = "0.7"
 tower-http = "0.5"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+criterion = "0.8"
