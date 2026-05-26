@@ -6,3 +6,10 @@ edition = "2024"
 [[bin]]
 name = "ferrimon-burner"
 path = "src/main.rs"
+
+[[bench]]
+name = "burner_bench"
+harness = false
+
+[dependencies]
+criterion = {workspace = true, features = ["html_reports"]}
