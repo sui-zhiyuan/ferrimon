@@ -3,6 +3,7 @@ use crate::fib::matrix::Matrix;
 use std::fmt::{Display, Formatter};
 use std::ops::MulAssign;
 use std::simd::Simd;
+use std::simd::num::SimdUint;
 
 #[derive(Clone, Debug)]
 pub struct MatrixSimd<const DIM: usize>([Simd<u32, DIM>; DIM]);
@@ -71,11 +72,10 @@ impl<const DIM: usize> MatrixSimd<DIM> {
 
     #[inline]
     fn sum_mod(vec: Simd<u32, DIM>) -> u32 {
-        let mut sum = 0u64;
-        for v in 0..DIM {
-            sum += vec[v] as u64;
-        }
-        (sum % MOD_U64) as u32
+        // Widen before reduce: DIM lanes of u32 products can sum to
+        // DIM * (2^32 - 1) ≈ 2^37 for DIM=32, overflowing u32.
+        let widened: Simd<u64, DIM> = vec.cast::<u64>();
+        widened.reduce_sum().wrapping_rem(MOD_U64) as u32
     }
 }
 
