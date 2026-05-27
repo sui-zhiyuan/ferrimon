@@ -1,0 +1,13 @@
+# Build with the host CPU's full instruction set.
+#
+# Required for the `ferrimon-burner` benches: the portable_simd code in
+# `MatrixSimd` only delivers measurable speedup when AVX2 (and any wider
+# ISA the host supports) is unlocked. Without this the compiler is
+# constrained to baseline x86_64 (SSE2 only), which both caps the SIMD
+# crate's lane width AND prevents auto-vectorization of the scalar
+# `MatrixSimple` baseline, making the comparison meaningless.
+#
+# Side effect: binaries built here are not portable to older CPUs. That
+# is acceptable; this repo is a benchmark harness, not a release artifact.
+[build]
+rustflags = ["-C", "target-cpu=native"]

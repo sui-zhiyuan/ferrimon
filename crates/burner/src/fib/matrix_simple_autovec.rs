@@ -1,13 +1,12 @@
 use crate::common::u32_mod::MOD_U64;
 use crate::fib::matrix::Matrix;
 use std::fmt::{Display, Formatter};
-use std::hint::black_box;
 use std::ops::MulAssign;
 
 #[derive(Clone, Debug)]
-pub struct MatrixSimple<const DIM: usize>([[u32; DIM]; DIM]);
+pub struct MatrixSimpleAutovec<const DIM: usize>([[u32; DIM]; DIM]);
 
-impl<const DIM: usize> Matrix<DIM> for MatrixSimple<DIM> {
+impl<const DIM: usize> Matrix<DIM> for MatrixSimpleAutovec<DIM> {
     const ZERO: Self = Self([[0u32; DIM]; DIM]);
     const IDENTITY: Self = {
         let mut values = Self::ZERO.0;
@@ -34,29 +33,26 @@ impl<const DIM: usize> Matrix<DIM> for MatrixSimple<DIM> {
     }
 }
 
-impl<const DIM: usize> MulAssign<&Self> for MatrixSimple<DIM> {
+impl<const DIM: usize> MulAssign<&Self> for MatrixSimpleAutovec<DIM> {
     fn mul_assign(&mut self, rhs: &Self) {
         let lhs = self.clone();
         self.mul_inner(&lhs, rhs);
     }
 }
 
-impl<const DIM: usize> Display for MatrixSimple<DIM> {
+impl<const DIM: usize> Display for MatrixSimpleAutovec<DIM> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         Matrix::fmt(self, f)
     }
 }
 
-impl<const DIM: usize> MatrixSimple<DIM> {
+impl<const DIM: usize> MatrixSimpleAutovec<DIM> {
     fn mul_inner(&mut self, lhs: &Self, rhs: &Self) {
         for i in 0..DIM {
             for j in 0..DIM {
                 let mut cell = 0u64;
                 for k in 0..DIM {
-                    // black_box on one operand hides the access pattern from
-                    // the loop/SLP vectorizers, keeping this the scalar baseline.
-                    let a = black_box(lhs.0[i][k]) as u64;
-                    cell += a * rhs.0[k][j] as u64;
+                    cell += lhs.0[i][k] as u64 * rhs.0[k][j] as u64;
                 }
                 self.0[i][j] = (cell % MOD_U64) as u32;
             }
@@ -66,34 +62,34 @@ impl<const DIM: usize> MatrixSimple<DIM> {
 
 #[cfg(test)]
 mod test {
-    use super::MatrixSimple;
+    use super::MatrixSimpleAutovec;
     use crate::fib::matrix::tests::{test_fib, test_fib_pow};
 
     #[test]
     fn test_fib_2() {
-        test_fib::<2, MatrixSimple<2>>(0..100);
+        test_fib::<2, MatrixSimpleAutovec<2>>(0..100);
     }
     #[test]
     fn test_fib_power_2() {
-        test_fib_pow::<2, MatrixSimple<2>>(0..20);
+        test_fib_pow::<2, MatrixSimpleAutovec<2>>(0..20);
     }
 
     #[test]
     fn test_fib_8() {
-        test_fib::<8, MatrixSimple<8>>(0..100);
+        test_fib::<8, MatrixSimpleAutovec<8>>(0..100);
     }
 
     #[test]
     fn test_fib_power_8() {
-        test_fib_pow::<8, MatrixSimple<8>>(0..20);
+        test_fib_pow::<8, MatrixSimpleAutovec<8>>(0..20);
     }
 
     #[test]
     fn test_fib_32() {
-        test_fib::<32, MatrixSimple<32>>(0..100);
+        test_fib::<32, MatrixSimpleAutovec<32>>(0..100);
     }
     #[test]
     fn test_fib_power_32() {
-        test_fib_pow::<32, MatrixSimple<32>>(0..20);
+        test_fib_pow::<32, MatrixSimpleAutovec<32>>(0..20);
     }
 }
